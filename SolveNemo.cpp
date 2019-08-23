@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
+#else
+#include <unistd.h>
+#endif
 
 class NemoLogic
 {
@@ -24,6 +28,25 @@ public:
 	void Print(int row);
 	void PrintRow(int row);
 	void PrintCol(int col);
+
+	void ClearScreen()
+	{
+#if defined(_WIN32) || defined(_WIN64)
+		system("cls");
+#else
+		printf("\033[1J");
+#endif
+	}
+
+	void SetCursor(int row, int col)
+	{
+#if defined(_WIN32) || defined(_WIN64)
+		COORD c = { col, row };
+		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+#else
+		printf("\033[%d;%dH", row+1, col+1);
+#endif
+	}
 
 	int GetColNum() const { return colnum; }
 	int GetRowNum() const { return rownum; }
@@ -53,7 +76,7 @@ int main(int argc, char *argv[])
 
 	printf("Enter data file name : ");
 	gets(filename);
-	system("cls");
+	logic.ClearScreen();
 
 	ret = logic.Load(filename);
 	if( ret == false )
@@ -66,8 +89,7 @@ int main(int argc, char *argv[])
 	const char *s[] = { "Not solved!!! TT.", "Solved!!!" };
 	logic.InitSolve();
 	int r = (int)logic.SolveN();
-	COORD c = { 0, logic.GetRowNum() };
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+	logic.SetCursor(logic.GetRowNum(), 0);
 	puts(s[r]);
 	getchar();
 }
@@ -144,8 +166,7 @@ bool NemoLogic::Load(const char *filename)
 
 void NemoLogic::PrintResult()
 {
-	COORD c = { 0, 0 };
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+	SetCursor(0, 0);
 	for( int i = 0 ; i < rownum ; i++ )
 	{
 		Print(i);
@@ -153,44 +174,46 @@ void NemoLogic::PrintResult()
 	}
 }
 
+//char *s[4] = { "", "бс", "бр", "в╠" };
+const char *s[4] = { "", "\u2593", "..", "##" };
 void NemoLogic::Print(int row)
 {
-	COORD c = { 0, row };
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
-	char *s[4] = { "", "бс", "бр", "в╠" };
+	SetCursor(row, 0);
 	for( int j = 0 ; j < colnum ; j++ )
 	{
 		char c = board[row*colnum+j];
-		printf(s[c]);
+		printf("%s", s[c]);
 	}
 }
 
 void NemoLogic::PrintRow(int row)
 {
-	COORD c = { 0, row };
-	char *s[4] = { "", "бс", "бр", "в╠" };
 	for( int j = 0 ; j < colnum ; j++ )
 	{
-		c.X = j*2;
-		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+		SetCursor(row, j*2);
 		char c = board[row*colnum+j];
-		printf(s[c]);
+		printf("%s", s[c]);
 	}
+#if defined(_WIN32) || defined(_WIN64)
 	Sleep(100);
+#else
+	usleep(100000);
+#endif
 }
 
 void NemoLogic::PrintCol(int col)
 {
-	COORD c = { col*2, 0 };
-	char *s[4] = { "", "бс", "бр", "в╠" };
 	for( int j = 0 ; j < rownum ; j++ )
 	{
-		c.Y = j;
-		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+		SetCursor(j, col*2);
 		char c = board[j*colnum+col];
-		printf(s[c]);
+		printf("%s", s[c]);
 	}
+#if defined(_WIN32) || defined(_WIN64)
 	Sleep(100);
+#else
+	usleep(100000);
+#endif
 }
 
 int NemoLogic::GetNumbers(FILE *fi, char numbers[])

@@ -75,7 +75,8 @@ int main(int argc, char *argv[])
 	char filename[128];
 
 	printf("Enter data file name : ");
-	gets(filename);
+	fgets(filename, 128, stdin);
+	for(int i=0;filename[i];i++) if(filename[i]=='\n') { filename[i]=0; break; }
 	logic.ClearScreen();
 
 	ret = logic.Load(filename);
@@ -174,8 +175,11 @@ void NemoLogic::PrintResult()
 	}
 }
 
-//char *s[4] = { "", "бс", "бр", "в╠" };
-const char *s[4] = { "", "\u2593", "..", "##" };
+#if defined(_WIN32) || defined(_WIN64)
+const char *s[4] = { "", "бс", "бр", "в╠" };	//	fill, empty, grey_fill
+#else
+const char *s[4] = { "", "\u2593", "\u2594", "\u2595" };
+#endif
 void NemoLogic::Print(int row)
 {
 	SetCursor(row, 0);

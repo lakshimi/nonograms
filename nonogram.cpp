@@ -178,7 +178,8 @@ void NemoLogic::PrintResult()
 #if defined(_WIN32) || defined(_WIN64)
 const char *s[4] = { "", "бс", "бр", "в╠" };	//	fill, empty, grey_fill
 #else
-const char *s[4] = { "", "\u2593", "\u2594", "\u2595" };
+//const char *s[4] = { "", "\u2593", "\u2594", "\u2595" };
+const char *s[4] = { "", "##", "xx", ".." };
 #endif
 void NemoLogic::Print(int row)
 {

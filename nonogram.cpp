@@ -175,18 +175,22 @@ void NemoLogic::PrintResult()
 	}
 }
 
+
 #if defined(_WIN32) || defined(_WIN64)
-const char *s[4] = { "", "бс", "бр", "в╠" };	//	fill, empty, grey_fill
+const char *s[4] = { "", "\u2593", "\u2592", "\u2591" };
 #else
-//const char *s[4] = { "", "\u2593", "\u2594", "\u2595" };
-const char *s[4] = { "", "##", "xx", ".." };
+const char *s[4] = { "\033[0m  ", "\033[40m  ", "\033[100m  ", "\033[47m  " };
 #endif
 void NemoLogic::Print(int row)
 {
+#if defined(_WIN32) || defined(_WIN64)
+	SetConsoleOutputCP(CP_UTF8);
+#endif
+
 	SetCursor(row, 0);
-	for( int j = 0 ; j < colnum ; j++ )
+	for (int j = 0; j < colnum; j++)
 	{
-		char c = board[row*colnum+j];
+		char c = board[row * colnum + j];
 		printf("%s", s[c]);
 	}
 }

@@ -10,6 +10,12 @@ class NonogramSolver:
 	# ---- Constraint propagation solver (SolveN from C++) ----
 
 	def solve_constraint(self):
+		step = None
+		for step in self.solve_constraint_steps():
+			pass
+		return step is not None and step[0] == 'solved'
+
+	def solve_constraint_steps(self):
 		puzzle = self.puzzle
 		total_check = sum(sum(clue) for clue in puzzle.col_clues)
 		last_check = 0
@@ -20,21 +26,22 @@ class NonogramSolver:
 			checked = 0
 			for i in range(puzzle.rownum):
 				c = self._check_row(i)
-				if c != row_check[i]:
-					if self.on_row_update:
-						self.on_row_update(i)
+				changed = c != row_check[i]
+				if changed:
 					row_check[i] = c
+				yield ('row', i, changed)
 			for i in range(puzzle.colnum):
 				c = self._check_col(i)
-				if c != col_check[i]:
-					if self.on_col_update:
-						self.on_col_update(i)
+				changed = c != col_check[i]
+				if changed:
 					col_check[i] = c
 				checked += c
+				yield ('col', i, changed)
 			if last_check == checked:
-				return False
+				yield ('failed',)
+				return
 			last_check = checked
-		return True
+		yield ('solved',)
 
 	def _check_row(self, row):
 		puzzle = self.puzzle
@@ -105,6 +112,90 @@ class NonogramSolver:
 				t[p] = FILLED
 				p += 1
 			c += 1
+
+	# ---- Combined solver: constraint propagation + trial backtracking ----
+
+	def solve_full_steps(self):
+		puzzle = self.puzzle
+
+		# Phase 1: constraint propagation
+		for step in self.solve_constraint_steps():
+			if step[0] == 'solved':
+				yield step
+				return
+			if step[0] == 'failed':
+				break
+			yield step
+
+		# Phase 2: trial backtracking for remaining unknowns
+		unknowns = [
+			(i, j)
+			for i in range(puzzle.rownum)
+			for j in range(puzzle.colnum)
+			if puzzle.board[i][j] == UNKNOWN
+		]
+		if not unknowns:
+			yield ('solved',)
+			return
+
+		if self._trial_backtrack():
+			revealed = set()
+			for row, col in unknowns:
+				if row not in revealed:
+					revealed.add(row)
+					yield ('row', row, True)
+			yield ('solved',)
+		else:
+			yield ('failed',)
+
+	def _trial_backtrack(self):
+		puzzle = self.puzzle
+		cell = self._find_unknown()
+		if cell is None:
+			return True
+
+		row, col = cell
+		saved = [r[:] for r in puzzle.board]
+
+		for value in [FILLED, EMPTY]:
+			puzzle.board = [r[:] for r in saved]
+			puzzle.board[row][col] = value
+			if self._propagate_silent():
+				if self._trial_backtrack():
+					return True
+
+		puzzle.board = [r[:] for r in saved]
+		return False
+
+	def _propagate_silent(self):
+		puzzle = self.puzzle
+		progress = True
+		while progress:
+			progress = False
+			for i in range(puzzle.rownum):
+				old = puzzle.board[i][:]
+				self._check_row(i)
+				if 0 in puzzle.board[i]:
+					return False
+				if old != puzzle.board[i]:
+					progress = True
+			for i in range(puzzle.colnum):
+				old = [puzzle.board[j][i] for j in range(puzzle.rownum)]
+				self._check_col(i)
+				new = [puzzle.board[j][i] for j in range(puzzle.rownum)]
+				if 0 in new:
+					return False
+				if old != new:
+					progress = True
+		return True
+
+	def _find_unknown(self):
+		puzzle = self.puzzle
+		for i in range(puzzle.rownum):
+			for j in range(puzzle.colnum):
+				if puzzle.board[i][j] == UNKNOWN:
+					return (i, j)
+		return None
 
 	# ---- Backtracking solver (Solve from C++) ----
 
